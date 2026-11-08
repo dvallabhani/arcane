@@ -92,7 +92,7 @@ Press on the crystal, drag it over the pedestal and release.
 Requires Node.js 22.12 or newer.
 
 ```bash
-git clone <this repository>
+git clone https://github.com/dvallabhani/arcane.git
 cd arcane
 npm install
 npm run dev        # http://localhost:5173
