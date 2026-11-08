@@ -1,0 +1,608 @@
+/*
+ * Arcane: visual tokens
+ * Midnight chamber, cyan crystal, violet spellwork, gold for the moment of success.
+ * Display type: IM Fell English (an old printed-grimoire face). UI type: Jost.
+ */
+/* Self-hosted fonts (SIL Open Font License, see /public/fonts). No third-party font requests. */
+@font-face {
+  font-family: 'IM Fell English';
+  src: url('/fonts/im-fell-english-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IM Fell English';
+  src: url('/fonts/im-fell-english-latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Jost';
+  src: url('/fonts/jost-latin-300-normal.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Jost';
+  src: url('/fonts/jost-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Jost';
+  src: url('/fonts/jost-latin-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Jost';
+  src: url('/fonts/jost-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+
+:root {
+  --abyss: #080716;
+  --dusk: #15102e;
+  --crystal: #5ef2ff;
+  --spell: #b48cff;
+  --ember: #ffc65c;
+  --parchment: #ece6ff;
+  --mist: #a69dcc;
+  --rose: #ff8f9e;
+  --hairline: rgba(180, 140, 255, 0.38);
+  --panel: rgba(17, 13, 40, 0.9);
+
+  --font-display: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Jost', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+
+  color-scheme: dark;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--parchment);
+  background: var(--abyss);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+}
+
+a {
+  color: var(--crystal);
+  text-underline-offset: 0.2em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
+}
+
+/* ---------- Layout ---------- */
+
+.app {
+  position: relative;
+  height: 100%;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+}
+
+.app--play.app--mouse .stage {
+  cursor: none; /* the violet orb is the cursor */
+  touch-action: none;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 1.35rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.375rem;
+  background: rgba(21, 16, 46, 0.6);
+  color: var(--parchment);
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: border-color 160ms, background-color 160ms, color 160ms;
+}
+
+.btn:hover {
+  border-color: var(--spell);
+  background: rgba(40, 28, 84, 0.75);
+}
+
+.btn--primary {
+  border-color: var(--crystal);
+  background: var(--crystal);
+  color: #061418;
+}
+
+.btn--primary:hover {
+  background: #93f7ff;
+  border-color: #93f7ff;
+}
+
+.btn--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--mist);
+  text-decoration: underline;
+  text-decoration-color: var(--hairline);
+  text-underline-offset: 0.3em;
+}
+
+.btn--quiet:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--parchment);
+}
+
+.btn--small {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.875rem;
+}
+
+/* ---------- Title screen ---------- */
+
+.title {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem clamp(1.25rem, 7vw, 6.5rem);
+  background: linear-gradient(90deg, rgba(8, 7, 22, 0.88) 0%, rgba(8, 7, 22, 0.55) 38%, rgba(8, 7, 22, 0) 62%);
+  pointer-events: none;
+}
+
+.title__block {
+  max-width: 30rem;
+  pointer-events: auto;
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(4.5rem, 11vw, 9rem);
+  line-height: 0.9;
+  letter-spacing: 0.015em;
+  color: var(--parchment);
+  text-shadow:
+    0 0 28px rgba(94, 242, 255, 0.35),
+    0 0 90px rgba(140, 108, 255, 0.45);
+  animation: wordmark-in 1.6s ease-out both;
+}
+
+@keyframes wordmark-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.12em;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.015em;
+    filter: blur(0);
+  }
+}
+
+.tagline {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.375rem, 2.6vw, 1.75rem);
+  color: var(--crystal);
+}
+
+.lede {
+  margin: 1.25rem 0 0;
+  max-width: 34ch;
+  font-size: 1.0625rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--parchment);
+}
+
+.title__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.privacy {
+  margin: 1.75rem 0 0;
+  max-width: 44ch;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--mist);
+}
+
+.title__footer {
+  position: absolute;
+  left: clamp(1.25rem, 7vw, 6.5rem);
+  right: 1.25rem;
+  bottom: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--mist);
+  pointer-events: auto;
+}
+
+/* ---------- In-game HUD ---------- */
+
+.hud {
+  position: fixed;
+  inset: 0 0 auto 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  pointer-events: none;
+}
+
+.objective {
+  max-width: 28rem;
+  text-shadow: 0 1px 12px rgba(8, 7, 22, 0.9);
+}
+
+.objective__goal {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+
+.objective__hint {
+  margin: 0.4rem 0 0;
+  min-height: 1.5em;
+  font-size: 0.95rem;
+  color: var(--crystal);
+}
+
+.hud__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ---------- Completion ---------- */
+
+.victory {
+  position: fixed;
+  left: 50%;
+  bottom: 12vh;
+  transform: translateX(-50%);
+  width: min(46rem, calc(100% - 2rem));
+  text-align: center;
+  pointer-events: none;
+  animation: victory-in 900ms 450ms ease-out both;
+}
+
+.victory__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.75rem, 7vw, 4.5rem);
+  line-height: 1;
+  color: var(--ember);
+  text-shadow:
+    0 0 24px rgba(255, 198, 92, 0.55),
+    0 0 70px rgba(255, 160, 60, 0.35);
+}
+
+.victory__text {
+  margin: 0.75rem 0 0;
+  color: var(--parchment);
+  text-shadow: 0 1px 10px rgba(8, 7, 22, 0.9);
+}
+
+.victory__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+@keyframes victory-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* ---------- Webcam preview ---------- */
+
+.preview {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  margin: 0;
+  width: 15rem;
+  opacity: 0;
+  transition: opacity 300ms;
+  pointer-events: none;
+}
+
+.preview--live {
+  opacity: 1;
+}
+
+.preview__frame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 0.5rem;
+  background: var(--dusk);
+  transform: scaleX(-1); /* mirror, so it moves like a mirror */
+}
+
+.preview__video,
+.preview__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview__video {
+  opacity: 0.55;
+}
+
+.preview__status {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--mist);
+}
+
+.preview__status::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--mist);
+  vertical-align: 0.05em;
+}
+
+.preview__status.is-on {
+  color: var(--parchment);
+}
+
+.preview__status.is-on::before {
+  background: var(--crystal);
+  box-shadow: 0 0 8px var(--crystal);
+}
+
+/* ---------- Notices (camera status / errors) ---------- */
+
+.notice {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(26rem, calc(100% - 2rem));
+  padding: 1.5rem 1.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.625rem;
+  background: var(--panel);
+  text-align: left;
+  pointer-events: auto;
+}
+
+.notice__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.notice--error .notice__title {
+  color: var(--rose);
+}
+
+.notice__text {
+  margin: 0.5rem 0 0;
+  color: var(--mist);
+}
+
+.notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+/* ---------- Debug / status panel ---------- */
+
+.debug {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.debug__toggle {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.375rem;
+  background: rgba(21, 16, 46, 0.6);
+  color: var(--mist);
+  cursor: pointer;
+}
+
+.debug__toggle:hover {
+  color: var(--parchment);
+}
+
+.debug__list {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  min-width: 15rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  font-variant-numeric: tabular-nums;
+}
+
+.debug__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.15rem 0;
+}
+
+.debug__row dt {
+  color: var(--mist);
+}
+
+.debug__row dd {
+  margin: 0;
+}
+
+/* ---------- How to play ---------- */
+
+.howto {
+  width: min(34rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  padding: 2rem 2.25rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.75rem;
+  background: #120e2a;
+  color: var(--parchment);
+  line-height: 1.55;
+}
+
+.howto::backdrop {
+  background: rgba(5, 4, 15, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.howto h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2.25rem;
+  line-height: 1.1;
+}
+
+.howto h3 {
+  margin: 1.5rem 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--crystal);
+}
+
+.howto p,
+.howto ol {
+  margin: 0.4rem 0 0;
+}
+
+.howto ol {
+  padding-left: 1.4rem;
+}
+
+.howto li {
+  padding-left: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.howto li::marker {
+  font-family: var(--font-display);
+  color: var(--spell);
+}
+
+.howto__goal {
+  color: var(--mist);
+}
+
+.howto__tip {
+  font-size: 0.9rem;
+  color: var(--mist);
+}
+
+.howto form {
+  margin-top: 1.75rem;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 760px) {
+  .title {
+    justify-content: flex-start;
+    padding-top: 12vh;
+    background: linear-gradient(180deg, rgba(8, 7, 22, 0.9) 0%, rgba(8, 7, 22, 0.6) 55%, rgba(8, 7, 22, 0.2) 100%);
+  }
+
+  .hud {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .hud__actions {
+    justify-content: flex-start;
+  }
+
+  .objective__goal {
+    font-size: 1.125rem;
+  }
+
+  .preview {
+    width: 9.5rem;
+    left: 1rem;
+    bottom: 1rem;
+  }
+
+  .debug {
+    right: 1rem;
+    bottom: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark,
+  .victory {
+    animation: none;
+  }
+}
