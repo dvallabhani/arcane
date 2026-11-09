@@ -39,7 +39,7 @@ export function HeartCrystal() {
     const health = world.hp / TUNING.maxHp
 
     // 0 = dim ... 1 = brightest. Once placed, the glow follows the pedestal's health.
-    const target = placed ? 0.35 + 0.65 * health : held ? 0.9 : hovered ? 0.75 : 0.35
+    const target = placed ? 0.2 + 0.45 * health : held ? 0.9 : hovered ? 0.75 : 0.35
     a.glow = damp(a.glow, target, 8, dt)
     // Gentle floating when free, held steady while grabbed.
     a.bob = damp(a.bob, held ? 0 : Math.sin(t * 1.6) * 0.09, 6, dt)
