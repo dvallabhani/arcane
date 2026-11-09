@@ -152,7 +152,8 @@ export class World {
   private wellTimers: number[] = []
   private specialSpot = 0
   private prevGrip = false
-  private history: { t: number; x: number; y: number }[] = []
+  /** Recent cursor positions while holding: each with the first and last time it was seen there. */
+  private history: { x: number; y: number; first: number; last: number }[] = []
   private events: GameEvent[] = []
 
   constructor(seed = 1) {
@@ -262,8 +263,7 @@ export class World {
         return
       }
       const target = this.clampToBounds(pointer)
-      this.history.push({ t: this.time, x: target.x, y: target.y })
-      while (this.history.length > 2 && this.time - this.history[1].t > 0.15) this.history.shift()
+      this.recordCursor(target)
       held.x = damp(held.x, target.x, TUNING.followSpeed, dt)
       held.y = damp(held.y, target.y, TUNING.followSpeed, dt)
       this.nearSocket = SPECIAL.has(held.kind) && this.canPlace(held) && (this.isOverSocket(held) || this.isOverSocket(target))
@@ -302,7 +302,8 @@ export class World {
       shard.state = 'held'
       shard.idle = 0
       this.heldId = shard.id
-      this.history = [{ t: this.time, x: pointer.x, y: pointer.y }]
+      this.history = []
+      this.recordCursor(pointer)
       this.events.push({ type: 'grab', kind: shard.kind })
     }
   }
@@ -346,26 +347,41 @@ export class World {
   }
 
   /**
-   * Velocity of the hand just before release: measured against the newest
-   * sample at least 80 ms older than the last one. Using "at least" (rather
-   * than a fixed window) keeps throws working at low frame rates, where samples
-   * can be more than 100 ms apart.
+   * Remembers where the cursor is. Repeated identical positions (the same
+   * frame replayed in several simulation steps, or a hand held still) extend
+   * one sample instead of adding new ones, so a pause looks like a pause and
+   * a fast move between two slow frames still looks fast.
+   */
+  private recordCursor(p: Vec2): void {
+    const prev = this.history[this.history.length - 1]
+    if (prev && Math.abs(prev.x - p.x) < 1e-4 && Math.abs(prev.y - p.y) < 1e-4) {
+      prev.last = this.time
+      return
+    }
+    this.history.push({ x: p.x, y: p.y, first: this.time, last: this.time })
+    while (this.history.length > 2 && this.time - this.history[1].last > 0.4) this.history.shift()
+  }
+
+  /**
+   * Velocity of the hand at release: zero if it had come to rest for a
+   * moment (a deliberate drop), otherwise its speed over its last ~50 ms of
+   * movement. Works the same at 60 fps and at 8 fps.
    */
   private releaseVelocity(cursor: Vec2 | null): Vec2 {
-    const samples = cursor ? [...this.history, { t: this.time, x: cursor.x, y: cursor.y }] : this.history
-    if (samples.length < 2) return { x: 0, y: 0 }
-    const last = samples[samples.length - 1]
-    let first = samples[0]
-    for (let i = samples.length - 2; i >= 0; i--) {
-      if (last.t - samples[i].t >= 0.08) {
-        first = samples[i]
+    if (cursor) this.recordCursor(cursor)
+    const h = this.history
+    if (h.length < 2) return { x: 0, y: 0 }
+    const end = h[h.length - 1]
+    if (this.time - end.first > TUNING.throwRestTime) return { x: 0, y: 0 }
+    let start = h[0]
+    for (let i = h.length - 2; i >= 0; i--) {
+      if (end.first - h[i].last >= 0.05) {
+        start = h[i]
         break
       }
     }
-    // Several samples can share a timestamp (input replayed between frames);
-    // treat that as one frame's worth of motion.
-    const span = Math.max(last.t - first.t, 1 / 60)
-    return { x: (last.x - first.x) / span, y: (last.y - first.y) / span }
+    const span = Math.max(end.first - start.last, 1 / 60)
+    return { x: (end.x - start.x) / span, y: (end.y - start.y) / span }
   }
 
   private launch(shard: Shard, dx: number, dy: number, speed: number): void {

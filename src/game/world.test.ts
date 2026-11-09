@@ -138,6 +138,15 @@ describe('crystal shards', () => {
     expect(types(w.update({ pointer: { x: WELLS[0].x + 3, y: WELLS[0].y + 1.5 }, grip: false }, 0))).toContain('throw')
   })
 
+  it('a flick that lands inside one slow frame (replayed as several fixed steps) still throws', () => {
+    const w = ready()
+    grab(w, WELLS[0])
+    tick(w, WELLS[0], true, 1) // held still for a while first
+    const to = { x: WELLS[0].x + 1.6, y: WELLS[0].y + 1.2 }
+    for (let i = 0; i < 6; i++) w.update({ pointer: to, grip: true }, 1 / 60) // one 100 ms frame, six steps
+    expect(types(w.update({ pointer: to, grip: false }, 0))).toContain('throw')
+  })
+
   it('a thrown shard destroys a shadow, with aim assist for slightly-off throws', () => {
     const w = freshWorld()
     startWave(w, 1)

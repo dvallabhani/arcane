@@ -55,6 +55,7 @@ export const TUNING = {
   smashCooldown: 0.4, // seconds before the same shard can hit the same target again
   knockback: 3,
   throwMinSpeed: 3.2, // releasing faster than this (units/s) throws the shard
+  throwRestTime: 0.25, // ...unless the hand had stopped for this long before letting go
   throwBoost: 1.25,
   throwMinLaunch: 7,
   throwMaxLaunch: 13,

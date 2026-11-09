@@ -110,8 +110,21 @@ test('throw: a quick flick of the mouse throws the shard', async ({ page }) => {
   await page.waitForTimeout(100)
   await page.mouse.down()
   await expect.poll(async () => (await world(page)).held).toBe('shard')
-  // Flick: a few fast moves, then let go mid-motion.
-  for (let i = 1; i <= 4; i++) await page.mouse.move(from.x + ((to.x - from.x) * i) / 4, from.y + ((to.y - from.y) * i) / 4)
+  // Flick and let go mid-motion. Playwright's mouse.move waits for a rendered
+  // frame between steps, which on software-rendered CI turns a "flick" into a
+  // slow drag with pauses (correctly treated as a drop), so the fast part of
+  // the gesture is dispatched directly, as a real flick would arrive.
+  await page.evaluate(
+    ([a, b]) => {
+      const stage = document.querySelector('[data-testid="stage"]')!
+      const fire = (type: string, p: { x: number; y: number }) =>
+        stage.dispatchEvent(new PointerEvent(type, { clientX: p.x, clientY: p.y, button: 0, pointerId: 1, bubbles: true }))
+      fire('pointermove', { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+      fire('pointermove', b)
+      fire('pointerup', b)
+    },
+    [from, to],
+  )
   await page.mouse.up()
   expect(await thrown).toBe(true)
 })
