@@ -8,7 +8,9 @@ It is deliberately one complete interaction, not a whole game: the point is to m
 
 ## Live Demo
 
-**▶ Live site:** _added after deployment_
+**▶ Live site: https://arcane-gesture-magic.vercel.app**
+
+Source: https://github.com/dvallabhani/arcane
 
 Built for current desktop browsers; automated tests run in Chromium (Chrome/Edge). Click **Play with webcam** and allow camera access, or click **Play with mouse** if you don't have a camera. No account or install is needed.
 
