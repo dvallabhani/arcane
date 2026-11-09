@@ -1,5 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { Fog, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three'
+import type { InteractionEvent } from '../game/interaction'
 import { damp } from '../game/math'
 import { crystal, cursorWorld, pointerInput, sceneLink } from '../game/session'
 import { gameStore } from '../game/store'
@@ -50,21 +51,30 @@ function InteractionDriver() {
     const dt = Math.min(delta, 0.05) // avoid a giant jump after switching tabs
     const playing = gameStore.get().screen === 'play'
 
-    let pointer: { x: number; y: number } | null = null
-    if (playing && pointerInput.ndc) {
-      ndcVector.set(pointerInput.ndc.x, pointerInput.ndc.y)
+    // Project an NDC point onto the interaction plane (null if there is none).
+    const toPlane = (ndc: { x: number; y: number } | null) => {
+      if (!playing || !ndc) return null
+      ndcVector.set(ndc.x, ndc.y)
       raycaster.setFromCamera(ndcVector, state.camera)
-      if (raycaster.ray.intersectPlane(plane, hit)) {
-        pointer = { x: hit.x, y: hit.y }
-      }
+      return raycaster.ray.intersectPlane(plane, hit) ? { x: hit.x, y: hit.y } : null
     }
+
+    const events: InteractionEvent[] = []
+    // 1. Replay presses/releases that happened between frames (dt = 0: no movement).
+    for (const edge of pointerInput.edges) {
+      events.push(...crystal.update({ pointer: toPlane(edge.ndc), grip: playing && edge.grip }, 0))
+    }
+    pointerInput.edges.length = 0
+
+    // 2. The regular per-frame update with the current cursor and grip.
+    const pointer = toPlane(pointerInput.ndc)
     cursorWorld.visible = pointer !== null
     if (pointer) {
       cursorWorld.x = pointer.x
       cursorWorld.y = pointer.y
     }
+    events.push(...crystal.update({ pointer, grip: playing && pointerInput.grip }, dt))
 
-    const events = crystal.update({ pointer, grip: playing && pointerInput.grip }, dt)
     const s = gameStore.get()
     gameStore.set({
       crystal: crystal.state,

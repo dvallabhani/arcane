@@ -13,22 +13,30 @@ export function useMouseControls(enabled: boolean, elementRef: RefObject<HTMLEle
 
     const toNdc = (event: PointerEvent) => {
       const rect = el.getBoundingClientRect()
-      input.ndc = {
+      const ndc = {
         x: ((event.clientX - rect.left) / rect.width) * 2 - 1,
         y: -(((event.clientY - rect.top) / rect.height) * 2 - 1),
       }
+      input.ndc = ndc
+      return ndc
     }
     const onDown = (event: PointerEvent) => {
       if (event.button !== 0) return
-      toNdc(event)
       input.grip = true
+      input.edges.push({ ndc: toNdc(event), grip: true })
       // Keep receiving moves even if the pointer leaves the canvas mid-drag.
-      el.setPointerCapture(event.pointerId)
+      try {
+        el.setPointerCapture(event.pointerId)
+      } catch {
+        // Not every pointer can be captured (e.g. synthetic events); dragging still works.
+      }
     }
-    const onMove = (event: PointerEvent) => toNdc(event)
-    const onUp = (event: PointerEvent) => {
+    const onMove = (event: PointerEvent) => {
       toNdc(event)
+    }
+    const onUp = (event: PointerEvent) => {
       input.grip = false
+      input.edges.push({ ndc: toNdc(event), grip: false })
       if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId)
       if (event.pointerType === 'touch') input.ndc = null // a lifted finger leaves no cursor behind
     }
@@ -38,6 +46,7 @@ export function useMouseControls(enabled: boolean, elementRef: RefObject<HTMLEle
     const onCancel = () => {
       input.grip = false
       input.ndc = null
+      input.edges.length = 0
     }
 
     el.addEventListener('pointerdown', onDown)

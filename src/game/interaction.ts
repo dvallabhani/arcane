@@ -87,16 +87,13 @@ export class CrystalInteraction {
     }
 
     if (this.state === 'grabbed') {
+      const target = this.clampToBounds(pointer)
       if (!grip) {
-        this.release(events)
+        this.release(events, target)
         return events
       }
-      const target = {
-        x: clamp(pointer.x, this.config.bounds.minX, this.config.bounds.maxX),
-        y: clamp(pointer.y, this.config.bounds.minY, this.config.bounds.maxY),
-      }
       this.moveToward(target, this.config.followSpeed, dt)
-      this.nearSocket = distance(this.position, this.config.socket) < this.config.snapRadius
+      this.nearSocket = this.isOverSocket(this.position) || this.isOverSocket(target)
       return events
     }
 
@@ -114,10 +111,16 @@ export class CrystalInteraction {
     return events
   }
 
-  /** Lets go of the crystal. Returns true if it landed on the pedestal. */
-  private release(events: InteractionEvent[]): boolean {
+  /**
+   * Lets go of the crystal. Returns true if it landed on the pedestal.
+   *
+   * The crystal eases toward the cursor, so after a quick flick it can still be
+   * trailing behind. What the player meant is "drop it where my cursor is", so
+   * releasing with the cursor over the pedestal counts too.
+   */
+  private release(events: InteractionEvent[], cursor: Vec2 | null = null): boolean {
     this.nearSocket = false
-    if (distance(this.position, this.config.socket) < this.config.snapRadius) {
+    if (this.isOverSocket(this.position) || (cursor !== null && this.isOverSocket(cursor))) {
       this.state = 'placed'
       events.push('placed')
       return true
@@ -127,6 +130,15 @@ export class CrystalInteraction {
     this.state = 'hovered'
     events.push('released')
     return false
+  }
+
+  private isOverSocket(point: Vec2): boolean {
+    return distance(point, this.config.socket) < this.config.snapRadius
+  }
+
+  private clampToBounds(point: Vec2): Vec2 {
+    const b = this.config.bounds
+    return { x: clamp(point.x, b.minX, b.maxX), y: clamp(point.y, b.minY, b.maxY) }
   }
 
   private moveToward(target: Vec2, speed: number, dt: number): void {

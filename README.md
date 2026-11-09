@@ -154,9 +154,10 @@ public/fonts/   self-hosted fonts (SIL Open Font License)
 
 ## Testing
 
-**Automated.** 48 unit tests (`npm test`) cover the crystal state machine, pinch ratio and hysteresis, coordinate mapping, the One Euro filter, the gesture interpreter (dropouts, hand loss and recovery), camera error mapping and the on-screen hints. 11 browser tests (`npm run test:e2e`) run the production build in Chromium:
+**Automated.** 51 unit tests (`npm test`) cover the crystal state machine, pinch ratio and hysteresis, coordinate mapping, the One Euro filter, the gesture interpreter (dropouts, hand loss and recovery), camera error mapping and the on-screen hints. 12 browser tests (`npm run test:e2e`) run the production build in Chromium:
 
 - mouse drag onto the pedestal completes the objective
+- an instant drag (press, move and release within one frame) still counts
 - releasing elsewhere leaves the crystal there
 - reset and play again work
 - the status panel works
@@ -192,6 +193,7 @@ public/fonts/   self-hosted fonts (SIL Open Font License)
 - *Mirrored coordinates.* The camera image is not mirrored but people expect a mirror. The mapping flips x once, in one place, and a unit test pins the direction.
 - *Reach.* Mapping the full camera frame to the screen forced people to push their hand out of view to reach the edges. The central 70% of the frame now covers the screen.
 - *Slow "GPU".* On machines without hardware acceleration, MediaPipe's GPU path runs on emulated WebGL at about 1–2 fps and freezes the page. The app now times detection and switches to the CPU path automatically.
+- *Clicks shorter than a frame.* Input was sampled once per animation frame, so a press-move-release that happened between two frames was lost. This showed up when testing the live site. Presses and releases are now queued and replayed in order, and letting go with the cursor over the pedestal counts even if the crystal is still easing toward it.
 - *2D vs 3D distance.* Image-space pinch distances produced false pinches when the thumb overlapped the index finger in the picture. 3D world landmarks fixed it.
 
 **Known limitations**

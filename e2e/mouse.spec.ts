@@ -51,6 +51,27 @@ test('mouse: drag the crystal onto the pedestal to complete the objective', asyn
   expect(c.y).toBeCloseTo(1.98, 1)
 })
 
+test('mouse: an instant drag (press, move and release within one frame) still counts', async ({ page }) => {
+  await page.getByTestId('play-mouse').click()
+  await waitForSceneToSettle(page)
+  const start = await screenPoint(page, 'start')
+  const socket = await screenPoint(page, 'socket')
+  // No waits between the steps: all three events can land before the next frame.
+  await page.evaluate(
+    ([a, b]) => {
+      const stage = document.querySelector('[data-testid="stage"]')!
+      const fire = (type: string, p: { x: number; y: number }) =>
+        stage.dispatchEvent(new PointerEvent(type, { clientX: p.x, clientY: p.y, button: 0, pointerId: 1, bubbles: true }))
+      fire('pointerdown', a)
+      fire('pointermove', b)
+      fire('pointerup', b)
+    },
+    [start, socket],
+  )
+  await expect.poll(async () => (await crystal(page)).state).toBe('placed')
+  await expect(page.getByTestId('victory')).toBeVisible()
+})
+
 test('mouse: releasing away from the pedestal leaves the crystal where it was dropped', async ({ page }) => {
   await page.getByTestId('play-mouse').click()
   await waitForSceneToSettle(page)

@@ -145,6 +145,28 @@ describe('CrystalInteraction', () => {
     expect(c.state).toBe('grabbed')
   })
 
+  it('places the crystal when released with the cursor over the pedestal, even if it is still catching up', () => {
+    const c = new CrystalInteraction()
+    run(c, start, false)
+    run(c, start, true)
+    run(c, socket, true) // one frame: the crystal has only moved part of the way
+    expect(c.position.x).toBeLessThan(socket.x - DEFAULT_CONFIG.snapRadius)
+    expect(run(c, socket, false)).toEqual(['placed'])
+  })
+
+  it('handles a press and release that both happen between two frames (dt = 0 replays)', () => {
+    const c = new CrystalInteraction()
+    expect(c.update({ pointer: start, grip: true }, 0)).toEqual(['grabbed'])
+    expect(c.update({ pointer: socket, grip: false }, 0)).toEqual(['placed'])
+  })
+
+  it('a quick click on the crystal away from the pedestal just picks it up and puts it down', () => {
+    const c = new CrystalInteraction()
+    c.update({ pointer: start, grip: true }, 0)
+    expect(c.update({ pointer: start, grip: false }, 0)).toEqual(['released'])
+    expect(c.position).toEqual(start)
+  })
+
   it('behaves the same at different frame rates', () => {
     const a = new CrystalInteraction()
     const b = new CrystalInteraction()

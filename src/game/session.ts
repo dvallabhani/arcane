@@ -21,6 +21,7 @@ export const sceneLink: { camera: Camera | null } = { camera: null }
 function clearInput(): void {
   pointerInput.ndc = null
   pointerInput.grip = false
+  pointerInput.edges.length = 0
 }
 
 export function resetGame(): void {

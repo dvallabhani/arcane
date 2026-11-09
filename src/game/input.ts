@@ -14,8 +14,15 @@ import type { Vec2 } from './math'
 export interface PointerInput {
   ndc: Vec2 | null
   grip: boolean
+  /**
+   * Presses and releases that happened since the last frame, in order.
+   * The scene samples input once per frame, so a click shorter than a frame
+   * (fast hardware, a busy laptop, automated tests) would otherwise be missed.
+   * The scene replays these edges before the regular per-frame update.
+   */
+  edges: { ndc: Vec2; grip: boolean }[]
 }
 
 export function createPointerInput(): PointerInput {
-  return { ndc: null, grip: false }
+  return { ndc: null, grip: false, edges: [] }
 }
