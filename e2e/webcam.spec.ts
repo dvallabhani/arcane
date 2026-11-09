@@ -64,8 +64,20 @@ test.describe('with a (fake) camera', () => {
     await expect(page.getByTestId('debug-hand')).toHaveText('Not detected')
     await expect(page.getByTestId('hint')).toContainText('Raise one hand')
 
-    // Switching to the mouse turns the camera off.
-    await page.getByTestId('switch-mode').click()
+  })
+
+  test('losing the hand during a wave pauses the game until it returns', async ({ page }) => {
+    await serveModelLocallyIfConfigured(page)
+    await page.goto('/?debug')
+    await page.getByTestId('play-webcam').click()
+    await expect.poll(() => page.evaluate(() => window.__arcane.state().camera), { timeout: 45_000 }).toBe('ready')
+    // Chrome's fake camera never shows a hand, so once a wave is running the game should pause itself.
+    await page.evaluate(() => window.__arcane.debug!.skipToWave(1))
+    await expect(page.getByTestId('pause-menu')).toContainText('Hand lost', { timeout: 30_000 })
+
+    // Switching to the mouse from the pause menu turns the camera off.
+    await page.getByRole('button', { name: 'Use mouse' }).click()
+    await page.keyboard.press('d')
     await expect(page.getByTestId('debug-camera')).toHaveText('Off')
   })
 })

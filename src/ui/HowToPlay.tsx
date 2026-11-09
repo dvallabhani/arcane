@@ -23,29 +23,49 @@ export function HowToPlay() {
       }}
     >
       <h2 id="howto-heading">How to play</h2>
-      <p className="howto__goal">Carry the crystal to the pedestal and let it go there.</p>
+      <p className="howto__goal">Awaken the pedestal, then keep it alive through five waves of shadows.</p>
 
-      <h3>With your webcam</h3>
-      <ol>
-        <li>Raise one hand so the camera can see your palm.</li>
-        <li>Point at the crystal with your index finger. It brightens when you’re close enough.</li>
-        <li>Pinch your thumb and index finger together to pick it up.</li>
-        <li>Keep pinching while you move your hand over the pedestal.</li>
-        <li>Open your fingers to let go.</li>
-      </ol>
-      <p className="howto__tip">
-        Works best about an arm’s length from the camera with your hand lit from the front. The small preview in the
-        corner shows what the tracker sees.
+      <h3>The one move: pinch</h3>
+      <p>
+        With the webcam, your index fingertip is the cursor. Pinch your thumb and index finger together to pick up a
+        crystal, keep pinching to carry it, and open your fingers to let go. With a mouse, press, drag and release.
       </p>
 
-      <h3>With a mouse, trackpad or touchscreen</h3>
-      <p>Press on the crystal, drag it over the pedestal and release.</p>
+      <h3>What to do with crystals</h3>
+      <ul>
+        <li>
+          <strong>Awaken:</strong> carry the large crystal to the pedestal to begin.
+        </li>
+        <li>
+          <strong>Smash:</strong> take a shard from one of the four wells and ram it into shadows. A shard breaks after
+          three hits; the well makes a new one.
+        </li>
+        <li>
+          <strong>Throw:</strong> flick your hand and let go mid-motion. Thrown shards curve toward nearby targets.
+        </li>
+        <li>
+          <strong>Ward</strong> (green): place it on the pedestal to heal it and raise a shield.
+        </li>
+        <li>
+          <strong>Nova</strong> (orange): place it on the pedestal to blast every shadow nearby.
+        </li>
+      </ul>
+
+      <h3>Shadows</h3>
+      <p>
+        Wisps drift in, darts tremble and then dash, brutes take three hits, splitters break in two. The last wave
+        brings the Hollow Eye, which fires dark orbs at the pedestal. Shoot them down.
+      </p>
+      <p className="howto__tip">
+        Quick kills build a combo multiplier. Webcam tips: about an arm’s length from the camera, hand lit from the
+        front. If your hand leaves the camera, the game pauses until it comes back.
+      </p>
+
+      <h3>Keys</h3>
+      <p className="howto__tip">Esc or P pause, M mute, D status panel.</p>
 
       <h3>Your privacy</h3>
-      <p>
-        Camera frames are analysed by Google’s MediaPipe hand tracker running inside your browser. Nothing is sent to a
-        server.
-      </p>
+      <p>Camera frames are analysed by Google’s MediaPipe hand tracker inside your browser. Nothing is sent to a server.</p>
 
       <form method="dialog">
         <button type="submit" className="btn btn--primary" autoFocus>

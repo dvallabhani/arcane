@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { AdditiveBlending, type Group, type Mesh, type MeshBasicMaterial, type SpriteMaterial } from 'three'
 import { damp } from '../game/math'
-import { crystal, cursorWorld, pointerInput } from '../game/session'
+import { cursorWorld, pointerInput, world } from '../game/session'
 import { getGlowTexture } from './textures'
 
 /**
@@ -41,7 +41,7 @@ export function MagicCursor() {
     group.current.visible = a.opacity > 0.01
 
     const gripping = pointerInput.grip
-    const engaged = crystal.state === 'hovered' || crystal.state === 'grabbed'
+    const engaged = world.hoveredId !== null || world.heldId !== null
     a.ring = damp(a.ring, gripping ? 0.55 : engaged ? 1.25 : 1, 14, dt)
     ring.current.scale.setScalar(a.ring)
     ring.current.rotation.z += dt * (gripping ? 4 : 1.2)

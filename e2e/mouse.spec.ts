@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
-import { crystal, drag, screenPoint, waitForSceneToSettle } from './helpers.ts'
+import { awaken, drag, screenPoint, startWave, waitForSceneToSettle, world } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?debug')
   await expect(page.getByRole('heading', { name: 'Arcane' })).toBeVisible()
 })
 
@@ -25,38 +25,21 @@ test('title screen offers both control modes and never touches the camera', asyn
   expect(await page.evaluate(() => (window as unknown as { cameraCalls: number }).cameraCalls)).toBe(0)
 })
 
-test('mouse: drag the crystal onto the pedestal to complete the objective', async ({ page }) => {
+test('awakening: carrying the crystal to the pedestal starts the first wave', async ({ page }) => {
   await page.getByTestId('play-mouse').click()
   await waitForSceneToSettle(page)
   await expect(page.getByText('Use your magic to place the crystal on the pedestal.')).toBeVisible()
-
-  const start = await screenPoint(page, 'start')
-  const socket = await screenPoint(page, 'socket')
-
-  await page.mouse.move(start.x, start.y)
-  await expect.poll(async () => (await crystal(page)).state).toBe('hovered')
-
-  await page.mouse.down()
-  await expect.poll(async () => (await crystal(page)).state).toBe('grabbed')
-  await page.mouse.up()
-
-  await drag(page, start, socket)
-  await expect.poll(async () => (await crystal(page)).state).toBe('placed')
-  await expect(page.getByTestId('victory')).toContainText('Magic Awakened!')
-
-  // The crystal settles exactly on the socket.
-  await page.waitForTimeout(1200)
-  const c = await crystal(page)
-  expect(c.x).toBeCloseTo(2.4, 1)
-  expect(c.y).toBeCloseTo(1.98, 1)
+  await drag(page, await screenPoint(page, 'start'), await screenPoint(page, 'socket'))
+  await expect(page.getByTestId('banner')).toContainText('Magic Awakened!')
+  await expect(page.getByTestId('banner')).toContainText('First Shadows', { timeout: 30_000 })
+  await expect(page.getByTestId('pedestal-health')).toContainText('100')
 })
 
-test('mouse: an instant drag (press, move and release within one frame) still counts', async ({ page }) => {
+test('awakening also works with an instant drag (press, move and release within one frame)', async ({ page }) => {
   await page.getByTestId('play-mouse').click()
   await waitForSceneToSettle(page)
   const start = await screenPoint(page, 'start')
   const socket = await screenPoint(page, 'socket')
-  // No waits between the steps: all three events can land before the next frame.
   await page.evaluate(
     ([a, b]) => {
       const stage = document.querySelector('[data-testid="stage"]')!
@@ -68,60 +51,118 @@ test('mouse: an instant drag (press, move and release within one frame) still co
     },
     [start, socket],
   )
-  await expect.poll(async () => (await crystal(page)).state).toBe('placed')
-  await expect(page.getByTestId('victory')).toBeVisible()
+  await expect.poll(async () => (await world(page)).phase).toBe('awakened')
 })
 
-test('mouse: releasing away from the pedestal leaves the crystal where it was dropped', async ({ page }) => {
+test('dropping the crystal away from the pedestal leaves it there', async ({ page }) => {
   await page.getByTestId('play-mouse').click()
   await waitForSceneToSettle(page)
-  const start = await screenPoint(page, 'start')
-  const middle = await screenPoint(page, { x: 0, y: 2.6 })
-
-  await drag(page, start, middle)
-  const dropped = await crystal(page)
-  expect(dropped.state).not.toBe('placed')
-  expect(dropped.x).toBeGreaterThan(-0.6)
-  expect(dropped.x).toBeLessThan(0.6)
-
-  await page.mouse.move(10, 10)
-  await page.waitForTimeout(500)
-  const later = await crystal(page)
-  expect(later.x).toBeCloseTo(dropped.x, 3)
-  await expect(page.getByTestId('victory')).toHaveCount(0)
+  await drag(page, await screenPoint(page, 'start'), await screenPoint(page, { x: -1.2, y: 3.2 }))
+  const heart = (await world(page)).shards.find((s) => s.kind === 'heart')!
+  expect(heart.state).toBe('resting')
+  expect(heart.x).toBeGreaterThan(-1.8)
+  expect((await world(page)).phase).toBe('intro')
 })
 
-test('mouse: reset returns the crystal and clears the completion', async ({ page }) => {
-  await page.getByTestId('play-mouse').click()
-  await waitForSceneToSettle(page)
-  await drag(page, await screenPoint(page, 'start'), await screenPoint(page, 'socket'))
-  await expect(page.getByTestId('victory')).toBeVisible()
+test('smash: a shard carried into a shadow destroys it and scores', async ({ page }) => {
+  await awaken(page)
+  await startWave(page, 1)
+  const well = (await world(page)).shards.find((s) => s.kind === 'shard' && s.x < -3)!
+  // A shadow right next to that well.
+  await page.evaluate(([x, y]) => window.__arcane.debug!.spawn('wisp', x, y), [well.x + 1.1, well.y + 0.4])
+  const target = (await world(page)).enemies.at(-1)!
+  await drag(page, await screenPoint(page, well), await screenPoint(page, target), { steps: 10, release: false })
+  // Keep chasing the shadow with the held shard until it is destroyed.
+  for (let i = 0; i < 60 && (await world(page)).score === 0; i++) {
+    const enemy = (await world(page)).enemies.find((e) => e.id === target.id)
+    if (!enemy) break
+    const p = await screenPoint(page, enemy)
+    await page.mouse.move(p.x, p.y, { steps: 2 })
+  }
+  await expect.poll(async () => (await world(page)).score, { timeout: 20_000 }).toBeGreaterThan(0)
+  await page.mouse.up()
+  await expect(page.getByTestId('score')).not.toContainText(/^0$/)
+})
 
+test('throw: a quick flick of the mouse throws the shard', async ({ page }) => {
+  await awaken(page)
+  await startWave(page, 1)
+  const well = (await world(page)).shards.find((s) => s.kind === 'shard' && s.x < -3)!
+  await page.evaluate(([x, y]) => window.__arcane.debug!.spawn('wisp', x, y), [well.x + 2.2, well.y + 1.6])
+
+  // Watch every frame (in the page) for a shard in flight or a kill, since a throw lasts a fraction of a second.
+  const thrown = page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const t0 = performance.now()
+        const check = () => {
+          const w = window.__arcane.world()
+          if (w.shards.some((s) => s.state === 'flying') || w.score > 0) return resolve(true)
+          if (performance.now() - t0 > 20_000) return resolve(false)
+          requestAnimationFrame(check)
+        }
+        check()
+      }),
+  )
+  const from = await screenPoint(page, well)
+  const to = await screenPoint(page, { x: well.x + 1.6, y: well.y + 1.2 })
+  await page.mouse.move(from.x, from.y)
+  await page.waitForTimeout(100)
+  await page.mouse.down()
+  await expect.poll(async () => (await world(page)).held).toBe('shard')
+  // Flick: a few fast moves, then let go mid-motion.
+  for (let i = 1; i <= 4; i++) await page.mouse.move(from.x + ((to.x - from.x) * i) / 4, from.y + ((to.y - from.y) * i) / 4)
+  await page.mouse.up()
+  expect(await thrown).toBe(true)
+})
+
+test('pause with Escape freezes the game; Resume continues it', async ({ page }) => {
+  await awaken(page)
+  await startWave(page, 1)
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('pause-menu')).toBeVisible()
+  expect((await world(page)).paused).toBe(true)
+  await page.getByTestId('resume').click()
+  await expect(page.getByTestId('pause-menu')).toHaveCount(0)
+  expect((await world(page)).paused).toBe(false)
+})
+
+test('defeat: the run ends when the pedestal falls, and Try again starts over', async ({ page }) => {
+  await awaken(page)
+  await startWave(page, 1)
+  await page.evaluate(() => {
+    window.__arcane.debug!.setHp(1)
+    window.__arcane.debug!.spawn('wisp', -1.4, 1.7)
+  })
+  await expect(page.getByTestId('end-screen')).toContainText('The light went out', { timeout: 30_000 })
   await page.getByTestId('play-again').click()
-  await expect(page.getByTestId('victory')).toHaveCount(0)
-  const c = await crystal(page)
-  expect(c).toMatchObject({ state: 'idle', x: -2.4, y: 1.9 })
-
-  // ...and the experience can be completed again.
-  await drag(page, await screenPoint(page, 'start'), await screenPoint(page, 'socket'))
-  await expect(page.getByTestId('victory')).toBeVisible()
-  await page.getByTestId('reset').click()
-  await expect(page.getByTestId('victory')).toHaveCount(0)
+  await expect(page.getByTestId('end-screen')).toHaveCount(0)
+  expect((await world(page)).phase).toBe('intro')
 })
 
-test('status panel reports crystal state and toggles with D', async ({ page }) => {
+test('victory: defeating the Hollow Eye wins the run', async ({ page }) => {
+  await awaken(page)
+  await startWave(page, 5)
+  await expect(page.getByTestId('boss-health')).toBeVisible({ timeout: 30_000 })
+  await expect.poll(async () => (await world(page)).boss?.state, { timeout: 30_000 }).toBe('active')
+  await page.evaluate(() => window.__arcane.debug!.damageBoss(999))
+  await expect(page.getByTestId('end-screen')).toContainText('The chamber is saved', { timeout: 30_000 })
+  expect(Number((await page.getByTestId('final-score').innerText()).replace(/,/g, ''))).toBeGreaterThan(5000)
+})
+
+test('status panel toggles with D and shows what is held', async ({ page }) => {
   await page.getByTestId('play-mouse').click()
   await waitForSceneToSettle(page)
   await page.keyboard.press('d')
   await expect(page.getByTestId('debug-camera')).toHaveText('Off')
-  await expect(page.getByTestId('debug-crystal')).toHaveText('Released (idle)')
+  await expect(page.getByTestId('debug-held')).toHaveText('Nothing')
   const start = await screenPoint(page, 'start')
   await page.mouse.move(start.x, start.y)
   await page.mouse.down()
-  await expect(page.getByTestId('debug-crystal')).toHaveText('Grabbed')
+  await expect(page.getByTestId('debug-held')).toHaveText('Heart crystal')
   await page.mouse.up()
   await page.keyboard.press('d')
-  await expect(page.getByTestId('debug-crystal')).toHaveCount(0)
+  await expect(page.getByTestId('debug-held')).toHaveCount(0)
 })
 
 test('how to play opens as a dialog and closes with Escape', async ({ page }) => {

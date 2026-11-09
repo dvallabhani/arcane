@@ -3,11 +3,12 @@ import { useRef } from 'react'
 import { AdditiveBlending, Color, DoubleSide, type Group, type Mesh, type MeshBasicMaterial, type PointLight, type SpriteMaterial } from 'three'
 import { PEDESTAL_TOP_Y, PEDESTAL_X } from '../game/constants'
 import { damp } from '../game/math'
-import { crystal } from '../game/session'
+import { world } from '../game/session'
 import { getBeamTexture, getGlowTexture } from './textures'
 
 const VIOLET = new Color('#8c6cff')
 const GOLD = new Color('#ffc65c')
+const RED = new Color('#ff4040')
 const runeColor = new Color()
 
 /**
@@ -24,22 +25,25 @@ export function Pedestal() {
   const wave = useRef<Mesh>(null)
   const waveMat = useRef<MeshBasicMaterial>(null)
   const light = useRef<PointLight>(null)
-  const anim = useRef({ awake: 0, ready: 0, waveT: 99 })
+  const anim = useRef({ awake: 0, ready: 0, beam: 0, waveT: 99 })
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05)
     const t = state.clock.elapsedTime
     const a = anim.current
-    const placed = crystal.state === 'placed'
+    const placed = world.phase !== 'intro'
+    // The big beam belongs to the awakening moment; during battle it settles to a faint glow.
+    const beamLevel = world.phase === 'awakened' ? 1 : world.phase === 'victory' ? 0.8 : 0.25
 
     // Restart the shockwave the moment the crystal is placed.
     if (placed && a.awake < 0.02) a.waveT = 0
     a.awake = damp(a.awake, placed ? 1 : 0, placed ? 3 : 8, dt)
-    a.ready = damp(a.ready, crystal.nearSocket ? 1 : 0, 10, dt)
+    a.beam = damp(a.beam, placed ? beamLevel : 0, 2, dt)
+    a.ready = damp(a.ready, world.nearSocket ? 1 : 0, 10, dt)
     a.waveT += dt
 
     const pulse = 0.5 + 0.5 * Math.sin(t * 6)
-    runeColor.copy(VIOLET).lerp(GOLD, a.awake)
+    runeColor.copy(VIOLET).lerp(GOLD, a.awake).lerp(RED, world.pedestalFlash)
     if (runeMat.current) {
       runeMat.current.color.copy(runeColor)
       runeMat.current.opacity = 0.55 + a.ready * (0.4 + pulse * 0.25) + a.awake * 0.6
@@ -49,8 +53,8 @@ export function Pedestal() {
       socketMat.current.opacity = 0.16 + a.ready * 0.35 + a.awake * (0.55 + 0.1 * Math.sin(t * 2))
     }
     if (beam.current && beamMat.current) {
-      beamMat.current.opacity = a.awake * 0.5
-      beam.current.scale.set(1, 0.2 + a.awake * 0.8, 1)
+      beamMat.current.opacity = a.beam * 0.5
+      beam.current.scale.set(1, 0.2 + a.beam * 0.8, 1)
     }
     if (wave.current && waveMat.current) {
       const p = Math.min(a.waveT / 1.2, 1)
@@ -58,7 +62,7 @@ export function Pedestal() {
       waveMat.current.opacity = (1 - p) * 0.8
     }
     if (light.current) {
-      light.current.intensity = 2.5 + a.ready * 6 + a.awake * 24
+      light.current.intensity = 2.5 + a.ready * 6 + a.awake * 6 + a.beam * 10
       light.current.color.copy(runeColor)
     }
   })

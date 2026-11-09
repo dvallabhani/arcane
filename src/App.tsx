@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { Component, useEffect, useRef, type ReactNode } from 'react'
-import { pointerInput, resetGame } from './game/session'
+import { clearEffects } from './scene/effects'
+import { pause, pointerInput, resume, toggleMute, togglePause, world } from './game/session'
 import { gameStore, useGame } from './game/store'
 import { useMouseControls } from './game/useMouseControls'
 import { Experience } from './scene/Experience'
@@ -13,11 +14,14 @@ export default function App() {
   const screen = useGame((s) => s.screen)
   const mode = useGame((s) => s.mode)
   const showHowTo = useGame((s) => s.showHowTo)
+  const runCount = useGame((s) => s.runCount)
   const stageRef = useRef<HTMLDivElement>(null)
   const playing = screen === 'play'
 
   useMouseControls(playing && mode === 'mouse', stageRef, pointerInput)
   useKeyboardShortcuts(playing)
+  useAutoPause()
+  useEffect(() => clearEffects(), [runCount]) // a new run starts with a clean scene
 
   return (
     <div className={`app app--${screen} app--${mode}`}>
@@ -25,7 +29,7 @@ export default function App() {
         <SceneErrorBoundary>
           <Canvas
             dpr={[1, 2]}
-            camera={{ fov: 42, near: 0.1, far: 80, position: [-2.3, 3, 10] }}
+            camera={{ fov: 42, near: 0.1, far: 80, position: [-1.8, 3, 10] }}
             gl={{ antialias: true, powerPreference: 'high-performance' }}
           >
             <Experience />
@@ -40,17 +44,55 @@ export default function App() {
   )
 }
 
-/** D toggles the status panel, R resets (only while playing). */
+/** Esc / P pause, M mute, D status panel. */
 function useKeyboardShortcuts(playing: boolean) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement)?.tagName === 'INPUT') return
-      if (e.key === 'd' || e.key === 'D') gameStore.set({ showDebug: !gameStore.get().showDebug })
-      if (playing && (e.key === 'r' || e.key === 'R')) resetGame()
+      if (e.metaKey || e.ctrlKey || e.altKey || gameStore.get().showHowTo) return
+      const key = e.key.toLowerCase()
+      if (key === 'd') gameStore.set({ showDebug: !gameStore.get().showDebug })
+      if (!playing) return
+      if (key === 'escape' || key === 'p') togglePause()
+      if (key === 'm') toggleMute()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [playing])
+}
+
+/**
+ * Pauses during a wave when the tab is hidden, or (webcam mode) when the hand
+ * has been out of view for a moment, and resumes by itself when the hand
+ * returns. Losing tracking shouldn't cost the player the pedestal.
+ */
+function useAutoPause() {
+  const screen = useGame((s) => s.screen)
+  const mode = useGame((s) => s.mode)
+  const camera = useGame((s) => s.camera)
+  const hand = useGame((s) => s.handDetected)
+  const phase = useGame((s) => s.phase)
+  const paused = useGame((s) => s.paused)
+  const reason = useGame((s) => s.pauseReason)
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden && gameStore.get().screen === 'play' && world.phase === 'wave') pause('hidden')
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  useEffect(() => {
+    if (screen !== 'play' || mode !== 'webcam' || camera !== 'ready') return
+    if (!hand && !paused && phase === 'wave') {
+      const timer = window.setTimeout(() => pause('hand'), 900)
+      return () => window.clearTimeout(timer)
+    }
+    if (hand && paused && reason === 'hand') {
+      const timer = window.setTimeout(resume, 400)
+      return () => window.clearTimeout(timer)
+    }
+  }, [screen, mode, camera, hand, phase, paused, reason])
 }
 
 /** If WebGL can't start (very old browser, disabled GPU), explain instead of showing a blank page. */

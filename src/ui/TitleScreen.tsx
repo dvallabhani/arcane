@@ -11,7 +11,9 @@ export function TitleScreen() {
         </h1>
         <p className="tagline">Your hands are the magic.</p>
         <p className="lede">
-          Lift a floating crystal with a pinch of your fingers and set it on the pedestal to wake the chamber.
+          Wake the pedestal with a pinch of your fingers, then hold back the shadows it draws in. Pluck crystals out of
+          the air, smash them into the dark or hurl them across the chamber. Five waves, and something watching at the
+          end.
         </p>
 
         <div className="title__actions">
@@ -33,7 +35,7 @@ export function TitleScreen() {
       </div>
 
       <footer className="title__footer">
-        <span>A gesture-controlled prototype built with React, Three.js and MediaPipe.</span>{' '}
+        <span>A gesture-controlled game built with React, Three.js and MediaPipe.</span>{' '}
         <a href={REPO_URL} target="_blank" rel="noreferrer">
           Source on GitHub
         </a>

@@ -1,22 +1,22 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { AdditiveBlending, Color, type Group, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial, type PointLight, type SpriteMaterial } from 'three'
-import type { CrystalState } from '../game/interaction'
+import { TUNING } from '../game/constants'
 import { damp } from '../game/math'
-import { crystal } from '../game/session'
+import { world } from '../game/session'
 import { getGlowTexture } from './textures'
 
-/** Visual intensity for each interaction state (0 = dim, 1 = brightest). */
-const GLOW: Record<CrystalState, number> = { idle: 0.35, hovered: 0.75, grabbed: 0.9, placed: 1 }
 const CYAN = new Color('#5ef2ff')
 const GOLD = new Color('#ffcf6b')
+const RED = new Color('#ff5050')
 const tint = new Color() // reused every frame to avoid allocations
 
 /**
- * The crystal reads the shared CrystalInteraction every frame and only
- * handles presentation: position, bobbing, spin and glow.
+ * The heart crystal from the opening. Before the pedestal awakens you carry it
+ * there; afterwards it sits in the socket, glowing gold, and dims and flickers
+ * red as the pedestal takes damage.
  */
-export function Crystal() {
+export function HeartCrystal() {
   const group = useRef<Group>(null)
   const body = useRef<Mesh>(null)
   const bodyMat = useRef<MeshStandardMaterial>(null)
@@ -25,26 +25,32 @@ export function Crystal() {
   const light = useRef<PointLight>(null)
   const shadow = useRef<Mesh>(null)
   const shadowMat = useRef<MeshBasicMaterial>(null)
-  const anim = useRef({ glow: GLOW.idle, bob: 0, scale: 1, gold: 0 })
+  const anim = useRef({ glow: 0.35, bob: 0, scale: 1, gold: 0 })
 
   useFrame((state, delta) => {
-    if (!group.current || !body.current) return
+    const heart = world.heart
+    if (!group.current || !body.current || !heart) return
     const dt = Math.min(delta, 0.05)
     const t = state.clock.elapsedTime
     const a = anim.current
-    const s = crystal.state
+    const held = world.heldId === heart.id
+    const hovered = world.hoveredId === heart.id
+    const placed = heart.state === 'socketed'
+    const health = world.hp / TUNING.maxHp
 
-    a.glow = damp(a.glow, GLOW[s], 8, dt)
+    // 0 = dim ... 1 = brightest. Once placed, the glow follows the pedestal's health.
+    const target = placed ? 0.35 + 0.65 * health : held ? 0.9 : hovered ? 0.75 : 0.35
+    a.glow = damp(a.glow, target, 8, dt)
     // Gentle floating when free, held steady while grabbed.
-    a.bob = damp(a.bob, s === 'grabbed' ? 0 : Math.sin(t * 1.6) * 0.09, 6, dt)
-    a.scale = damp(a.scale, s === 'hovered' ? 1.1 : s === 'grabbed' ? 1.06 : 1, 10, dt)
-    a.gold = damp(a.gold, s === 'placed' ? 1 : 0, 2.5, dt)
+    a.bob = damp(a.bob, held ? 0 : Math.sin(t * 1.6) * 0.09, 6, dt)
+    a.scale = damp(a.scale, hovered ? 1.1 : held ? 1.06 : 1, 10, dt)
+    a.gold = damp(a.gold, placed ? 1 : 0, 2.5, dt)
 
-    group.current.position.set(crystal.position.x, crystal.position.y + a.bob, 0)
+    group.current.position.set(heart.x, heart.y + a.bob, 0)
     group.current.scale.setScalar(a.scale)
-    body.current.rotation.y += dt * (s === 'grabbed' ? 2.4 : s === 'placed' ? 1.4 : 0.6)
+    body.current.rotation.y += dt * (held ? 2.4 : placed ? 1.4 : 0.6)
 
-    tint.copy(CYAN).lerp(GOLD, a.gold * 0.55)
+    tint.copy(CYAN).lerp(GOLD, a.gold * 0.55).lerp(RED, world.pedestalFlash * 0.8)
     if (bodyMat.current) {
       bodyMat.current.emissiveIntensity = 0.2 + a.glow * 0.6
       bodyMat.current.emissive.copy(tint)
@@ -61,7 +67,7 @@ export function Crystal() {
     // Soft contact shadow on the floor: darker and tighter the lower the crystal is.
     if (shadow.current && shadowMat.current) {
       const height = Math.max(group.current.position.y, 0.1)
-      shadow.current.position.set(crystal.position.x, 0.02, 0)
+      shadow.current.position.set(heart.x, 0.02, 0)
       shadow.current.scale.setScalar(1.1 + height * 0.25)
       shadowMat.current.opacity = Math.min(0.7, 1.1 / height)
     }

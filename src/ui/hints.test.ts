@@ -1,26 +1,45 @@
 import { describe, expect, it } from 'vitest'
 import { hintFor, type HintContext } from './hints'
 
-const base: HintContext = { mode: 'webcam', crystal: 'idle', nearSocket: false, handDetected: true, camera: 'ready' }
+const base: HintContext = {
+  mode: 'webcam',
+  phase: 'intro',
+  wave: 1,
+  bossWave: false,
+  held: null,
+  hovering: false,
+  nearSocket: false,
+  handDetected: true,
+  camera: 'ready',
+}
 
 describe('hintFor', () => {
   it('asks for a hand when none is visible', () => {
     expect(hintFor({ ...base, handDetected: false })).toMatch(/raise one hand/i)
   })
-  it('walks through the webcam steps', () => {
-    expect(hintFor(base)).toMatch(/point/i)
-    expect(hintFor({ ...base, crystal: 'hovered' })).toMatch(/pinch/i)
-    expect(hintFor({ ...base, crystal: 'grabbed' })).toMatch(/move to the pedestal/i)
-    expect(hintFor({ ...base, crystal: 'grabbed', nearSocket: true })).toMatch(/open your fingers/i)
-  })
   it('stays quiet while the camera is starting (a separate notice covers it)', () => {
     expect(hintFor({ ...base, camera: 'requesting' })).toBe('')
   })
+  it('walks through the awakening with webcam wording', () => {
+    expect(hintFor(base)).toMatch(/point/i)
+    expect(hintFor({ ...base, hovering: true })).toMatch(/pinch/i)
+    expect(hintFor({ ...base, held: 'heart' })).toMatch(/carry/i)
+    expect(hintFor({ ...base, held: 'heart', nearSocket: true })).toMatch(/open your fingers/i)
+  })
   it('uses mouse wording in mouse mode', () => {
     expect(hintFor({ ...base, mode: 'mouse' })).toMatch(/press and hold/i)
-    expect(hintFor({ ...base, mode: 'mouse', crystal: 'grabbed', nearSocket: true })).toMatch(/let go/i)
+    expect(hintFor({ ...base, mode: 'mouse', phase: 'wave', held: 'shard' })).toMatch(/let go to throw/i)
   })
-  it('celebrates once placed', () => {
-    expect(hintFor({ ...base, crystal: 'placed' })).toMatch(/awake/i)
+  it('explains shards early on and special crystals whenever held', () => {
+    expect(hintFor({ ...base, phase: 'wave' })).toMatch(/shard/i)
+    expect(hintFor({ ...base, phase: 'wave', held: 'shard' })).toMatch(/smash/i)
+    expect(hintFor({ ...base, phase: 'wave', held: 'nova' })).toMatch(/pedestal/i)
+    expect(hintFor({ ...base, phase: 'wave', held: 'ward', nearSocket: true })).toMatch(/release its power/i)
+  })
+  it('points at the orbs during the boss fight', () => {
+    expect(hintFor({ ...base, phase: 'wave', wave: 5, bossWave: true })).toMatch(/orbs/i)
+  })
+  it('is empty once the run is over', () => {
+    expect(hintFor({ ...base, phase: 'victory' })).toBe('')
   })
 })

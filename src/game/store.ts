@@ -1,42 +1,60 @@
 import { useSyncExternalStore } from 'react'
-import type { CrystalState } from './interaction'
 import type { CameraErrorInfo } from '../vision/cameraErrors'
+import type { Phase, ShardKind } from './world'
 
 export type Screen = 'title' | 'play'
 export type ControlMode = 'mouse' | 'webcam'
 export type CameraStatus = 'off' | 'requesting' | 'loading-model' | 'ready' | 'error'
+export type PauseReason = 'menu' | 'hand' | 'hidden'
 
 /**
  * UI-facing state. Values that change every frame (positions) are NOT stored
- * here; they live in plain objects read inside the render loop. This store only
- * holds things the HTML overlay needs, and it only notifies React when a value
- * actually changes.
+ * here; they live in the World and are read inside the render loop. This store
+ * only holds what the HTML overlay shows, and it only notifies React when a
+ * value actually changes.
  */
 export interface GameState {
   screen: Screen
   mode: ControlMode
   showHowTo: boolean
   showDebug: boolean
+  muted: boolean
 
+  // Camera / hand tracking
   camera: CameraStatus
   cameraError: CameraErrorInfo | null
   /** Bumped to retry starting the camera after an error. */
   cameraAttempt: number
   delegate: 'GPU' | 'CPU' | null
   trackingFps: number
-
   handDetected: boolean
   pinching: boolean
   pinchRatio: number | null
 
-  crystal: CrystalState
-  /** A grabbed crystal is over the pedestal and will be placed if released. */
+  // Game
+  phase: Phase
+  wave: number
+  waveName: string
+  waveCount: number
+  bossWave: boolean
+  hp: number
+  maxHp: number
+  shielded: boolean
+  score: number
+  multiplier: number
+  best: number
+  newBest: boolean
+  waveBonus: number
+  bossHp: number
+  bossMaxHp: number
+  enemies: number
+  held: ShardKind | null
+  hovering: boolean
   nearSocket: boolean
-  completed: boolean
-  /** Bumped each time the crystal is placed, to trigger the particle burst. */
-  completionCount: number
-  /** Bumped on reset so scene effects can clear themselves. */
-  resetCount: number
+  paused: boolean
+  pauseReason: PauseReason | null
+  /** Bumped on every new run so scene effects can clear themselves. */
+  runCount: number
 }
 
 export const initialState: GameState = {
@@ -44,6 +62,7 @@ export const initialState: GameState = {
   mode: 'mouse',
   showHowTo: false,
   showDebug: false,
+  muted: false,
   camera: 'off',
   cameraError: null,
   cameraAttempt: 0,
@@ -52,11 +71,28 @@ export const initialState: GameState = {
   handDetected: false,
   pinching: false,
   pinchRatio: null,
-  crystal: 'idle',
+  phase: 'intro',
+  wave: 1,
+  waveName: '',
+  waveCount: 5,
+  bossWave: false,
+  hp: 100,
+  maxHp: 100,
+  shielded: false,
+  score: 0,
+  multiplier: 1,
+  best: 0,
+  newBest: false,
+  waveBonus: 0,
+  bossHp: 0,
+  bossMaxHp: 0,
+  enemies: 0,
+  held: null,
+  hovering: false,
   nearSocket: false,
-  completed: false,
-  completionCount: 0,
-  resetCount: 0,
+  paused: false,
+  pauseReason: null,
+  runCount: 0,
 }
 
 type Listener = () => void
